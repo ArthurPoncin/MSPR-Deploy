@@ -5,6 +5,9 @@
 # Sources clonees par bootstrap-dev.sh
 sources/
 
+# Memo passphrase (jamais commit)
+.passphrase.local
+
 .DS_Store
 Thumbs.db
 
