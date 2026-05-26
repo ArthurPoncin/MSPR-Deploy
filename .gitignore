@@ -1,0 +1,16 @@
+.env
+.env.local
+.env.*.local
+
+# Sources clonees par bootstrap-dev.sh
+sources/
+
+.DS_Store
+Thumbs.db
+
+*.log
+*.swp
+*~
+
+.idea/
+.vscode/

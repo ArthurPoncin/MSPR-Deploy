@@ -1,0 +1,233 @@
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: mspr-healthai-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: healthai
+      POSTGRES_USER: healthai_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sources/MSPR-DB/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U healthai_user -d healthai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5434:5432"
+    networks:
+      - mspr_data_network
+
+  auth-db:
+    image: postgres:17-alpine
+    container_name: mspr-auth-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${AUTH_DB_USER:-root}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:-password}
+      POSTGRES_DB: ${AUTH_DB_NAME:-auth_db}
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-root} -d ${AUTH_DB_NAME:-auth_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+    networks:
+      - mspr_data_network
+
+  auth-migrate:
+    build:
+      context: ./sources/MSPR-AUTH
+    container_name: mspr-auth-migrate
+    command: sh -c "bun run db:migrate"
+    environment:
+      DATABASE_URL: postgres://${AUTH_DB_USER:-root}:${AUTH_DB_PASSWORD:-password}@auth-db:5432/${AUTH_DB_NAME:-auth_db}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - mspr_data_network
+
+  auth:
+    build:
+      context: ./sources/MSPR-AUTH
+    container_name: mspr-auth-service
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://${AUTH_DB_USER:-root}:${AUTH_DB_PASSWORD:-password}@auth-db:5432/${AUTH_DB_NAME:-auth_db}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      auth-migrate:
+        condition: service_completed_successfully
+    networks:
+      - mspr_data_network
+
+  api:
+    build:
+      context: ./sources/MSPR-API
+    container_name: mspr-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: mspr-healthai-db
+      DB_PORT: 5432
+      DB_NAME: healthai
+      DB_USER: healthai_user
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+    volumes:
+      - ./sources/MSPR-ETL/data:/app/etl-data:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mspr_data_network
+
+  etl:
+    build:
+      context: ./sources/MSPR-ETL
+    container_name: mspr-etl
+    restart: unless-stopped
+    environment:
+      DB_HOST: mspr-healthai-db
+      DB_PORT: 5432
+      DB_NAME: healthai
+      DB_USER: healthai_user
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      CRON_SCHEDULE: ${CRON_SCHEDULE:-0 2 * * *}
+    volumes:
+      - ./sources/MSPR-ETL/data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mspr_data_network
+
+  ai-nutrition:
+    build:
+      context: ./sources/MSPR-AI-Nutrition
+    container_name: mspr-ai-nutrition
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      DB_HOST: mspr-healthai-db
+      DB_PORT: 5432
+      DB_NAME: healthai
+      DB_USER: healthai_user
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      OLLAMA_HOST: http://ollama:11434
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      AUTH_API_URL: http://mspr-auth-service:3000
+      SPRING_API_URL: http://mspr-api:8080
+      DEFAULT_LLM: ${DEFAULT_LLM:-ollama}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    networks:
+      - mspr_data_network
+      - ai_internal
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: mspr-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull gemma3:4b && wait"]
+    networks:
+      - ai_internal
+
+  mongo:
+    build:
+      context: ./sources/MSPR-MongoDB
+    container_name: mspr-mongo
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mspr_data_network
+
+  reco-fitness:
+    build:
+      context: ./sources/MSPR-Reco-Fitness/reco-fitness
+    container_name: mspr-reco-fitness
+    restart: unless-stopped
+    ports:
+      - "8002:8000"
+    environment:
+      DB_HOST: mspr-healthai-db
+      DB_PORT: 5432
+      DB_NAME: healthai
+      DB_USER: healthai_user
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DATABASE: ${MONGO_DATABASE:-reco_fitness}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      AUTH_API_URL: http://mspr-auth-service:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      auth:
+        condition: service_started
+    networks:
+      - mspr_data_network
+
+  front:
+    build:
+      context: ./sources/MSPR-FRONT
+      args:
+        VITE_AUTH_BASE_URL: http://localhost:3000
+        VITE_API_BASE_URL: http://localhost:8080/api
+        VITE_AI_NUTRITION_BASE_URL: http://localhost:8001
+        VITE_RECO_FITNESS_BASE_URL: http://localhost:8002
+        VITE_ADMIN_EMAILS: ${VITE_ADMIN_EMAILS:-admin@healthai.local}
+        VITE_USE_MOCK: "false"
+    container_name: mspr-front
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - auth
+      - api
+    networks:
+      - mspr_data_network
+
+networks:
+  mspr_data_network:
+    driver: bridge
+    name: mspr_data_network
+  ai_internal:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  auth_db_data:
+  ollama_data:
+  mongo_data:
