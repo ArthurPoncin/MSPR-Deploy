@@ -2,10 +2,10 @@
 
 Orchestration Docker Compose de la plateforme **MSPR HealthAI Coach**.
 
-Deux modes :
+Deux modes, un seul script :
 
-- **Mode prod** (`docker-compose.yml`) : pull les images publiees sur GHCR. Zero clone supplementaire, ideal pour evaluation et demo.
-- **Mode dev** (`docker-compose.dev.yml` + `bootstrap-dev.sh`) : clone les 8 depots sources sur leurs branches actives et build localement.
+- **Mode prod** : `./bootstrap.sh` pull les images publiees sur GHCR. Zero clone supplementaire, ideal pour evaluation et demo.
+- **Mode dev** : `./bootstrap.sh --dev` clone les 8 depots sources sur leurs branches actives et build localement.
 
 ## Prerequis
 
@@ -15,35 +15,25 @@ Deux modes :
 - Ports libres : `3000`, `5173`, `5433`, `5434`, `8001`, `8002`, `8080`, `27018`
 - Pour le mode dev : `git`, `bash`, `openssl`
 
-## Mode prod : demarrage rapide
+## Demarrage en une commande
 
 ```bash
-git clone git@github.com:ArthurPoncin/MSPR-Deploy.git
+git clone https://github.com/ArthurPoncin/MSPR-Deploy.git
 cd MSPR-Deploy
-cp .env.example .env
-# Generer le secret JWT puis l'inserer dans .env :
-openssl rand -base64 64
-docker compose up -d
-```
-
-Au premier lancement, Docker pull les 8 images depuis GHCR (`ghcr.io/whitefoxxyt/mspr-*:latest`) puis Ollama telecharge `gemma3:4b` (~3 Go). Comptez 5 a 10 minutes selon la connexion.
-
-## Mode dev : setup en une commande
-
-```bash
-git clone git@github.com:ArthurPoncin/MSPR-Deploy.git
-cd MSPR-Deploy
-./bootstrap-dev.sh
+./bootstrap.sh           # mode prod (defaut)
+# ou
+./bootstrap.sh --dev     # mode dev (clone sources + build local)
 ```
 
 Le script :
 
-1. clone les 8 depots `whitefoxxyt/MSPR-HealthAI-Coach-*` dans `sources/` sur les branches actives (`main`, `master`, `Sonar`, `dev`) ;
+1. (mode dev uniquement) clone les 8 depots `whitefoxxyt/MSPR-HealthAI-Coach-*` dans `sources/` sur les branches actives (`main`, `master`, `Sonar`, `dev`) ;
 2. cree `.env` depuis `.env.example` si absent et genere `BETTER_AUTH_SECRET` ;
-3. lance `docker compose -f docker-compose.dev.yml up -d --build`.
+3. lance `docker compose up -d` (mode prod) ou `docker compose -f docker-compose.dev.yml up -d --build` (mode dev).
 
-Re-execution : le script fetch/pull les sources existantes (fast-forward only) puis relance le build.
-Pour ne pas demarrer la stack a la fin : `./bootstrap-dev.sh --no-up`.
+Au premier lancement, Docker pull (ou build) les 8 services puis Ollama telecharge `gemma3:4b` (~3 Go). Comptez 5 a 10 minutes selon la connexion.
+
+Pour ne pas demarrer la stack a la fin : `./bootstrap.sh --no-up` (ou `./bootstrap.sh --dev --no-up`).
 
 ## Acces aux services
 

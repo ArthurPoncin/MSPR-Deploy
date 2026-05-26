@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# Bootstrap MSPR HealthAI Coach.
+#
+# Mode prod (defaut) : pull les images depuis GHCR puis docker compose up.
+# Mode dev (--dev)   : clone les 8 depots sources sur leurs branches actives,
+#                      prepare .env, puis docker compose up --build.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCES_DIR="$ROOT_DIR/sources"
+ENV_FILE="$ROOT_DIR/.env"
+GITHUB_OWNER="whitefoxxyt"
+
+MODE="prod"
+DO_UP=1
+
+usage() {
+  cat <<EOF
+Usage: ./bootstrap.sh [OPTIONS]
+
+Mode prod (defaut) : pull les images depuis GHCR et lance la stack.
+Mode dev (--dev)   : clone les 8 depots sources et build localement.
+
+Options:
+  --dev       Active le mode dev (clone + build).
+  --no-up     Prepare l'environnement sans lancer docker compose up.
+  -h, --help  Affiche cette aide.
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --dev) MODE="dev" ;;
+    --no-up) DO_UP=0 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Argument inconnu : $arg" >&2; usage >&2; exit 2 ;;
+  esac
+done
+
+# Mapping : nom_local | repo_distant_whitefoxxyt | branche_active
+REPOS=(
+  "MSPR-DB|MSPR-HealthAI-Coach-BDD|main"
+  "MSPR-AUTH|MSPR-HealthAI-Coach-Auth|main"
+  "MSPR-API|MSPR-HealthAI-Coach-API|Sonar"
+  "MSPR-ETL|MSPR-HealthAI-Coach-ETL|master"
+  "MSPR-FRONT|MSPR-HealthAI-Coach-Dahsboard|dev"
+  "MSPR-AI-Nutrition|MSPR-HealthAI-Coach-AI-Nutrition|master"
+  "MSPR-Reco-Fitness|MSPR-HealthAI-Coach-Reco-Fitness-|master"
+  "MSPR-MongoDB|MSPR-HealthAI-Coach-MongoDB|master"
+)
+
+log()  { printf '\033[1;34m[bootstrap]\033[0m %s\n' "$*"; }
+fail() { printf '\033[1;31m[bootstrap]\033[0m %s\n' "$*" >&2; exit 1; }
+
+# --- Prerequis ---------------------------------------------------------------
+for cmd in docker openssl; do
+  command -v "$cmd" >/dev/null || fail "Commande requise absente : $cmd"
+done
+if ! docker compose version >/dev/null 2>&1; then
+  fail "Docker Compose v2 introuvable. Mettre a jour Docker."
+fi
+if ! docker info >/dev/null 2>&1; then
+  fail "Docker daemon non accessible. Verifier que Docker tourne."
+fi
+
+# --- Clone des sources (mode dev uniquement) --------------------------------
+if [[ "$MODE" == "dev" ]]; then
+  command -v git >/dev/null || fail "git requis pour le mode dev"
+  mkdir -p "$SOURCES_DIR"
+  for entry in "${REPOS[@]}"; do
+    IFS='|' read -r local_name remote_name branch <<<"$entry"
+    target="$SOURCES_DIR/$local_name"
+    url="https://github.com/$GITHUB_OWNER/$remote_name.git"
+    if [[ -d "$target/.git" ]]; then
+      log "$local_name : fetch + checkout $branch"
+      git -C "$target" fetch --quiet origin
+      git -C "$target" checkout --quiet "$branch"
+      git -C "$target" pull --quiet --ff-only origin "$branch"
+    else
+      log "$local_name : clone (branche $branch)"
+      git clone --quiet --branch "$branch" "$url" "$target"
+    fi
+  done
+fi
+
+# --- Preparation .env --------------------------------------------------------
+if [[ ! -f "$ENV_FILE" ]]; then
+  cp "$ROOT_DIR/.env.example" "$ENV_FILE"
+  log ".env cree depuis .env.example"
+fi
+
+current_secret=$(grep -E '^BETTER_AUTH_SECRET=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
+if [[ -z "$current_secret" ]]; then
+  new_secret=$(openssl rand -base64 64 | tr -d '\n')
+  tmp=$(mktemp)
+  awk -v secret="$new_secret" '
+    BEGIN { set = 0 }
+    /^BETTER_AUTH_SECRET=/ { print "BETTER_AUTH_SECRET=" secret; set = 1; next }
+    { print }
+    END { if (!set) print "BETTER_AUTH_SECRET=" secret }
+  ' "$ENV_FILE" > "$tmp"
+  mv "$tmp" "$ENV_FILE"
+  log "BETTER_AUTH_SECRET genere"
+fi
+
+# --- Selection du compose file ----------------------------------------------
+if [[ "$MODE" == "dev" ]]; then
+  COMPOSE_FILE="$ROOT_DIR/docker-compose.dev.yml"
+  UP_FLAGS=(-d --build)
+else
+  COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
+  UP_FLAGS=(-d)
+fi
+COMPOSE_NAME=$(basename "$COMPOSE_FILE")
+
+# --- Lancement ---------------------------------------------------------------
+if [[ "$DO_UP" -eq 1 ]]; then
+  log "Mode $MODE : docker compose -f $COMPOSE_NAME up ${UP_FLAGS[*]}"
+  log "Au premier run, comptez 5 a 10 min (pull/build + telechargement Ollama)."
+  cd "$ROOT_DIR"
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up "${UP_FLAGS[@]}"
+  log "Stack demarree (mode $MODE)."
+  log "Status   : docker compose -f $COMPOSE_NAME ps"
+  log "Logs     : docker compose -f $COMPOSE_NAME logs -f"
+  log "Frontend : http://localhost:5173"
+  log "API doc  : http://localhost:8080/api/swagger-ui.html"
+else
+  log "Setup termine (mode $MODE). Pour lancer :"
+  build_flag=""
+  [[ "$MODE" == "dev" ]] && build_flag=" --build"
+  log "  docker compose -f $COMPOSE_NAME up -d$build_flag"
+fi
