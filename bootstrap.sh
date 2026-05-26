@@ -104,20 +104,28 @@ if [[ -z "$current_secret" ]]; then
   log "BETTER_AUTH_SECRET genere"
 fi
 
-# --- Dechiffrement RESEND_API_KEY -------------------------------------------
+# --- Dechiffrement des cles chiffrees ---------------------------------------
 RESEND_ENC="$ROOT_DIR/secrets/resend.enc"
+MISTRAL_ENC="$ROOT_DIR/secrets/mistral.enc"
+
 current_resend=$(grep -E '^RESEND_API_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
-if [[ -z "$current_resend" ]]; then
-  if [[ ! -f "$RESEND_ENC" ]]; then
-    log "secrets/resend.enc absent : passez votre propre RESEND_API_KEY dans .env"
+current_mistral=$(grep -E '^MISTRAL_API_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
+
+need_resend=0
+need_mistral=0
+[[ -z "$current_resend" && -f "$RESEND_ENC" ]] && need_resend=1
+[[ -z "$current_mistral" && -f "$MISTRAL_ENC" ]] && need_mistral=1
+
+if [[ "$need_resend" -eq 1 || "$need_mistral" -eq 1 ]]; then
+  if [[ -n "${MSPR_PASS:-}" ]]; then
+    pass="$MSPR_PASS"
   else
-    if [[ -n "${MSPR_PASS:-}" ]]; then
-      pass="$MSPR_PASS"
-    else
-      printf '\033[1;34m[bootstrap]\033[0m Passphrase pour dechiffrer la cle Resend : '
-      read -rs pass
-      echo
-    fi
+    printf '\033[1;34m[bootstrap]\033[0m Passphrase pour dechiffrer les cles API (Resend + Mistral) : '
+    read -rs pass
+    echo
+  fi
+
+  if [[ "$need_resend" -eq 1 ]]; then
     if decrypted=$(openssl enc -aes-256-cbc -d -pbkdf2 -iter 100000 -salt -pass pass:"$pass" -in "$RESEND_ENC" 2>/dev/null) \
         && [[ "$decrypted" =~ ^re_ ]]; then
       tmp=$(mktemp)
@@ -130,10 +138,33 @@ if [[ -z "$current_resend" ]]; then
       mv "$tmp" "$ENV_FILE"
       log "RESEND_API_KEY dechiffree depuis secrets/resend.enc"
     else
-      fail "Dechiffrement echoue (passphrase incorrecte ?). Relancez ou renseignez RESEND_API_KEY a la main."
+      fail "Dechiffrement Resend echoue (passphrase incorrecte ?). Relancez ou renseignez RESEND_API_KEY a la main."
     fi
-    unset pass decrypted
+    unset decrypted
   fi
+
+  if [[ "$need_mistral" -eq 1 ]]; then
+    if decrypted=$(openssl enc -aes-256-cbc -d -pbkdf2 -iter 100000 -salt -pass pass:"$pass" -in "$MISTRAL_ENC" 2>/dev/null) \
+        && [[ "$decrypted" =~ ^[A-Za-z0-9]{20,}$ ]]; then
+      tmp=$(mktemp)
+      awk -v key="$decrypted" '
+        BEGIN { set = 0 }
+        /^MISTRAL_API_KEY=/ { print "MISTRAL_API_KEY=" key; set = 1; next }
+        { print }
+        END { if (!set) print "MISTRAL_API_KEY=" key }
+      ' "$ENV_FILE" > "$tmp"
+      mv "$tmp" "$ENV_FILE"
+      log "MISTRAL_API_KEY dechiffree depuis secrets/mistral.enc"
+    else
+      fail "Dechiffrement Mistral echoue (passphrase incorrecte ?). Relancez ou renseignez MISTRAL_API_KEY a la main."
+    fi
+    unset decrypted
+  fi
+
+  unset pass
+else
+  [[ -z "$current_resend" && ! -f "$RESEND_ENC" ]] && log "secrets/resend.enc absent : passez votre propre RESEND_API_KEY dans .env"
+  [[ -z "$current_mistral" && ! -f "$MISTRAL_ENC" ]] && log "secrets/mistral.enc absent : MISTRAL_API_KEY vide, Ollama sera utilise en fallback"
 fi
 
 # --- Selection du compose file ----------------------------------------------
