@@ -29,7 +29,14 @@ Le script :
 
 1. (mode dev uniquement) clone les 8 depots `whitefoxxyt/MSPR-HealthAI-Coach-*` dans `sources/` sur les branches actives (`main`, `master`, `Sonar`, `dev`) ;
 2. cree `.env` depuis `.env.example` si absent et genere `BETTER_AUTH_SECRET` ;
-3. lance `docker compose up -d` (mode prod) ou `docker compose -f docker-compose.dev.yml up -d --build` (mode dev).
+3. dechiffre `secrets/resend.enc` (demande la passphrase fournie par l'equipe) ;
+4. lance `docker compose up -d` (mode prod) ou `docker compose -f docker-compose.dev.yml up -d --build` (mode dev).
+
+Pour eviter la saisie interactive, passer la passphrase en variable d'environnement :
+
+```bash
+MSPR_PASS="MSPR-EPSI-2026" ./bootstrap.sh
+```
 
 Au premier lancement, Docker pull (ou build) les 8 services puis Ollama telecharge `gemma3:4b` (~3 Go). Comptez 5 a 10 minutes selon la connexion.
 
@@ -82,8 +89,8 @@ docker compose -f docker-compose.dev.yml up -d --build api
 
 Le `.env.example` documente chaque variable. Les seuls champs obligatoires sont :
 
-- `BETTER_AUTH_SECRET` : secret HMAC partage entre `auth` et `api` (a generer)
-- `RESEND_API_KEY` : cle Resend pour les emails (une cle de demo est fournie)
+- `BETTER_AUTH_SECRET` : secret HMAC partage entre `auth` et `api`, genere automatiquement par `bootstrap.sh`
+- `RESEND_API_KEY` : cle Resend pour les emails. Une cle de demo est chiffree dans `secrets/resend.enc` ; `bootstrap.sh` la dechiffre via la passphrase fournie par l'equipe lors de la soutenance. Pour un deploiement autonome, renseigner directement la valeur dans `.env` (le dechiffrement est alors saute).
 
 Les autres variables ont des valeurs par defaut dans le compose et restent commentees.
 
@@ -123,6 +130,8 @@ Les images GHCR sont buildees depuis ces depots publics. Le mode dev les clone d
 **Le pull Ollama est tres long.** Le premier `docker compose up` telecharge `gemma3:4b` (~3 Go). Suivre avec `docker compose logs -f ollama`.
 
 **Erreur `BETTER_AUTH_SECRET is required`.** Generer puis renseigner la valeur dans `.env` : `openssl rand -base64 64`.
+
+**Passphrase Resend invalide.** Verifier la passphrase fournie par l'equipe ou renseigner manuellement `RESEND_API_KEY` dans `.env` (cle Resend personnelle, obtenue via https://resend.com/api-keys).
 
 **Conflit de port.** Adapter la partie hote des mappings dans `docker-compose.yml` (ex : `"15173:5173"`).
 

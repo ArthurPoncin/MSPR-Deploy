@@ -104,6 +104,38 @@ if [[ -z "$current_secret" ]]; then
   log "BETTER_AUTH_SECRET genere"
 fi
 
+# --- Dechiffrement RESEND_API_KEY -------------------------------------------
+RESEND_ENC="$ROOT_DIR/secrets/resend.enc"
+current_resend=$(grep -E '^RESEND_API_KEY=' "$ENV_FILE" | head -1 | cut -d= -f2- || true)
+if [[ -z "$current_resend" ]]; then
+  if [[ ! -f "$RESEND_ENC" ]]; then
+    log "secrets/resend.enc absent : passez votre propre RESEND_API_KEY dans .env"
+  else
+    if [[ -n "${MSPR_PASS:-}" ]]; then
+      pass="$MSPR_PASS"
+    else
+      printf '\033[1;34m[bootstrap]\033[0m Passphrase pour dechiffrer la cle Resend : '
+      read -rs pass
+      echo
+    fi
+    if decrypted=$(openssl enc -aes-256-cbc -d -pbkdf2 -iter 100000 -salt -pass pass:"$pass" -in "$RESEND_ENC" 2>/dev/null) \
+        && [[ "$decrypted" =~ ^re_ ]]; then
+      tmp=$(mktemp)
+      awk -v key="$decrypted" '
+        BEGIN { set = 0 }
+        /^RESEND_API_KEY=/ { print "RESEND_API_KEY=" key; set = 1; next }
+        { print }
+        END { if (!set) print "RESEND_API_KEY=" key }
+      ' "$ENV_FILE" > "$tmp"
+      mv "$tmp" "$ENV_FILE"
+      log "RESEND_API_KEY dechiffree depuis secrets/resend.enc"
+    else
+      fail "Dechiffrement echoue (passphrase incorrecte ?). Relancez ou renseignez RESEND_API_KEY a la main."
+    fi
+    unset pass decrypted
+  fi
+fi
+
 # --- Selection du compose file ----------------------------------------------
 if [[ "$MODE" == "dev" ]]; then
   COMPOSE_FILE="$ROOT_DIR/docker-compose.dev.yml"
