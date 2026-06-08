@@ -27,7 +27,7 @@ cd MSPR-Deploy
 
 Le script :
 
-1. (mode dev uniquement) clone les 8 depots `whitefoxxyt/MSPR-HealthAI-Coach-*` dans `sources/` sur les branches actives (`main`, `master`, `Sonar`, `dev`) ;
+1. (mode dev uniquement) clone les 8 depots `whitefoxxyt/MSPR-HealthAI-Coach-*` dans `sources/` sur leurs branches actives (`main`, `master`, `dev`) ;
 2. cree `.env` depuis `.env.example` si absent et genere `BETTER_AUTH_SECRET` ;
 3. dechiffre `secrets/resend.enc` (demande la passphrase fournie par l'equipe) ;
 4. lance `docker compose up -d` (mode prod) ou `docker compose -f docker-compose.dev.yml up -d --build` (mode dev).
@@ -118,7 +118,7 @@ Les images GHCR sont buildees depuis ces depots publics. Le mode dev les clone d
 |---------|----------------|------------|
 | `mspr-db` | `main` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-BDD |
 | `mspr-auth` | `main` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-Auth |
-| `mspr-api` | `Sonar` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-API |
+| `mspr-api` | `main` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-API |
 | `mspr-etl` | `master` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-ETL |
 | `mspr-front` | `dev` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-Dahsboard |
 | `mspr-ai-nutrition` | `master` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-AI-Nutrition |

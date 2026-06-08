@@ -42,7 +42,7 @@ done
 REPOS=(
   "MSPR-DB|MSPR-HealthAI-Coach-BDD|main"
   "MSPR-AUTH|MSPR-HealthAI-Coach-Auth|main"
-  "MSPR-API|MSPR-HealthAI-Coach-API|Sonar"
+  "MSPR-API|MSPR-HealthAI-Coach-API|main"
   "MSPR-ETL|MSPR-HealthAI-Coach-ETL|master"
   "MSPR-FRONT|MSPR-HealthAI-Coach-Dahsboard|dev"
   "MSPR-AI-Nutrition|MSPR-HealthAI-Coach-AI-Nutrition|master"

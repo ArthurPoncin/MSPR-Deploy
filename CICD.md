@@ -60,11 +60,13 @@ celles publiees depuis la branche par defaut de chaque depot.
   Reco-Fitness (pytest-cov).
 - **Linting** selon la techno : ruff (Python), oxlint + eslint + vue-tsc (Front),
   `node --check` (MongoDB).
-- **SonarQube** : le service API embarque le plugin Sonar (`pom.xml`) et un environnement
-  d'analyse local (`docker-compose.sonar.yml` dans le depot API). L'analyse se lance
-  manuellement (`mvn sonar:sonar`) contre cette instance locale. Une integration directe
-  dans la CI necessiterait une instance joignable (SonarCloud avec un token en secret
-  GitHub, ou une instance auto-hebergee).
+- **SonarQube** : le service API embarque le plugin Sonar (`pom.xml`, organisation
+  `healthai-coach`, projet `healthai-coach-api`) et un environnement d'analyse local
+  (`docker-compose.sonar.yml` dans le depot API) pour une analyse manuelle
+  (`mvn sonar:sonar`). La CI de l'API contient en plus une etape SonarCloud qui se declenche
+  automatiquement des qu'un secret GitHub `SONAR_TOKEN` est configure (sinon elle est
+  ignoree, sans casser le pipeline). Pour l'activer : creer le projet sur SonarCloud sous
+  l'organisation `healthai-coach`, puis ajouter le token en secret `SONAR_TOKEN` du depot.
 
 ## Deploiement
 
