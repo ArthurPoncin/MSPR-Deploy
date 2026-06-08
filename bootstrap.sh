@@ -53,6 +53,26 @@ REPOS=(
 log()  { printf '\033[1;34m[bootstrap]\033[0m %s\n' "$*"; }
 fail() { printf '\033[1;31m[bootstrap]\033[0m %s\n' "$*" >&2; exit 1; }
 
+# Set-or-append d'une variable dans .env, uniquement si elle est absente ou vide.
+ensure_env_value() {
+  local var="$1" value="$2" current
+  current=$(grep -E "^${var}=" "$ENV_FILE" | head -1 | cut -d= -f2- || true)
+  if [[ -z "$current" ]]; then
+    local tmp; tmp=$(mktemp)
+    awk -v k="$var" -v v="$value" '
+      BEGIN { set = 0 }
+      $0 ~ "^" k "=" { print k "=" v; set = 1; next }
+      { print }
+      END { if (!set) print k "=" v }
+    ' "$ENV_FILE" > "$tmp"
+    mv "$tmp" "$ENV_FILE"
+    log "$var genere"
+  fi
+}
+
+# Mot de passe alphanumerique (URL-safe pour les chaines postgres://...).
+gen_password() { openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 24; }
+
 # --- Prerequis ---------------------------------------------------------------
 for cmd in docker openssl; do
   command -v "$cmd" >/dev/null || fail "Commande requise absente : $cmd"
@@ -103,6 +123,11 @@ if [[ -z "$current_secret" ]]; then
   mv "$tmp" "$ENV_FILE"
   log "BETTER_AUTH_SECRET genere"
 fi
+
+# Mots de passe des bases generes si absents (evite le defaut 'password' en exploitation).
+# Sur un volume deja initialise avec l'ancien mot de passe, faire d'abord un reset (down -v).
+ensure_env_value DB_PASSWORD "$(gen_password)"
+ensure_env_value AUTH_DB_PASSWORD "$(gen_password)"
 
 # --- Dechiffrement des cles chiffrees ---------------------------------------
 RESEND_ENC="$ROOT_DIR/secrets/resend.enc"

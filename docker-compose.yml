@@ -1,5 +1,20 @@
+# Reglages communs de durcissement (mise en production MSPR3) :
+# - no-new-privileges : empeche l'elevation de privileges dans le conteneur
+# - rotation des logs json-file : evite la saturation disque en exploitation
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+  logging: *default-logging
+
 services:
   db:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-db:latest
     container_name: mspr-healthai-db
     restart: unless-stopped
@@ -15,11 +30,12 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     networks:
       - mspr_data_network
 
   auth-db:
+    <<: *hardening
     image: postgres:17-alpine
     container_name: mspr-auth-db
     restart: unless-stopped
@@ -35,11 +51,12 @@ services:
       timeout: 5s
       retries: 5
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     networks:
       - mspr_data_network
 
   auth-migrate:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-auth:latest
     container_name: mspr-auth-migrate
     command: sh -c "bun run db:migrate"
@@ -53,6 +70,7 @@ services:
       - mspr_data_network
 
   auth:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-auth:latest
     container_name: mspr-auth-service
     restart: unless-stopped
@@ -73,6 +91,7 @@ services:
       - mspr_data_network
 
   api:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-api:latest
     container_name: mspr-api
     restart: unless-stopped
@@ -94,6 +113,7 @@ services:
       - mspr_data_network
 
   etl:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-etl:latest
     container_name: mspr-etl
     restart: unless-stopped
@@ -113,6 +133,7 @@ services:
       - mspr_data_network
 
   ai-nutrition:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-ai-nutrition:latest
     container_name: mspr-ai-nutrition
     restart: unless-stopped
@@ -140,6 +161,7 @@ services:
       - ai_internal
 
   ollama:
+    <<: *hardening
     image: ollama/ollama:latest
     container_name: mspr-ollama
     restart: unless-stopped
@@ -150,11 +172,12 @@ services:
       - ai_internal
 
   mongo:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-mongodb:latest
     container_name: mspr-mongo
     restart: unless-stopped
     ports:
-      - "27018:27017"
+      - "127.0.0.1:27018:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -166,6 +189,7 @@ services:
       - mspr_data_network
 
   reco-fitness:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-reco-fitness:latest
     container_name: mspr-reco-fitness
     restart: unless-stopped
@@ -192,6 +216,7 @@ services:
       - mspr_data_network
 
   front:
+    <<: *hardening
     image: ghcr.io/whitefoxxyt/mspr-front:latest
     container_name: mspr-front
     restart: unless-stopped
