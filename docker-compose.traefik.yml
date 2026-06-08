@@ -1,0 +1,84 @@
+# Overlay d'exposition publique via Traefik (MSPR3).
+# A combiner avec le compose de base (+ monitoring) :
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.traefik.yml up -d
+#
+# Routage sur *.zespri.duckdns.org, TLS via le certresolver "duckdns" (wildcard deja emis).
+# Le front est servi par l'image rebuildee avec les URLs publiques (mspr-front:traefik).
+# Les variables CORS pointent toutes vers l'origine du front (mspr.zespri.duckdns.org).
+
+services:
+  front:
+    image: mspr-front:traefik
+    networks: [mspr_data_network, proxy_net]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      - "traefik.http.routers.mspr-front.rule=Host(`mspr.zespri.duckdns.org`)"
+      - "traefik.http.routers.mspr-front.entrypoints=websecure"
+      - "traefik.http.routers.mspr-front.tls.certresolver=duckdns"
+      - "traefik.http.services.mspr-front.loadbalancer.server.port=5173"
+
+  api:
+    networks: [mspr_data_network, proxy_net]
+    environment:
+      CORS_ORIGIN: https://mspr.zespri.duckdns.org
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      - "traefik.http.routers.mspr-api.rule=Host(`mspr-api.zespri.duckdns.org`)"
+      - "traefik.http.routers.mspr-api.entrypoints=websecure"
+      - "traefik.http.routers.mspr-api.tls.certresolver=duckdns"
+      - "traefik.http.services.mspr-api.loadbalancer.server.port=8080"
+
+  auth:
+    networks: [mspr_data_network, proxy_net]
+    environment:
+      BETTER_AUTH_URL: https://mspr-auth.zespri.duckdns.org
+      CORS_ORIGIN: https://mspr.zespri.duckdns.org
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      - "traefik.http.routers.mspr-auth.rule=Host(`mspr-auth.zespri.duckdns.org`)"
+      - "traefik.http.routers.mspr-auth.entrypoints=websecure"
+      - "traefik.http.routers.mspr-auth.tls.certresolver=duckdns"
+      - "traefik.http.services.mspr-auth.loadbalancer.server.port=3000"
+
+  ai-nutrition:
+    networks: [mspr_data_network, ai_internal, proxy_net]
+    environment:
+      CORS_ALLOW_ORIGINS: https://mspr.zespri.duckdns.org
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      - "traefik.http.routers.mspr-ai.rule=Host(`mspr-ai.zespri.duckdns.org`)"
+      - "traefik.http.routers.mspr-ai.entrypoints=websecure"
+      - "traefik.http.routers.mspr-ai.tls.certresolver=duckdns"
+      - "traefik.http.services.mspr-ai.loadbalancer.server.port=8001"
+
+  reco-fitness:
+    networks: [mspr_data_network, proxy_net]
+    environment:
+      CORS_ALLOW_ORIGINS: https://mspr.zespri.duckdns.org
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      - "traefik.http.routers.mspr-reco.rule=Host(`mspr-reco.zespri.duckdns.org`)"
+      - "traefik.http.routers.mspr-reco.entrypoints=websecure"
+      - "traefik.http.routers.mspr-reco.tls.certresolver=duckdns"
+      - "traefik.http.services.mspr-reco.loadbalancer.server.port=8000"
+
+  grafana:
+    networks: [mspr_data_network, proxy_net]
+    environment:
+      GF_SERVER_ROOT_URL: https://mspr-grafana.zespri.duckdns.org
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      - "traefik.http.routers.mspr-grafana.rule=Host(`mspr-grafana.zespri.duckdns.org`)"
+      - "traefik.http.routers.mspr-grafana.entrypoints=websecure"
+      - "traefik.http.routers.mspr-grafana.tls.certresolver=duckdns"
+      - "traefik.http.services.mspr-grafana.loadbalancer.server.port=3000"
+
+networks:
+  proxy_net:
+    external: true

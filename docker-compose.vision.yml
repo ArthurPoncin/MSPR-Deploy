@@ -1,0 +1,13 @@
+# Overlay : active la classification photo par Mistral vision (route A1).
+# A combiner apres les autres overlays :
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml \
+#     -f docker-compose.traefik.yml -f docker-compose.vision.yml up -d
+#
+# Utilise l'image derivee mspr-ai-nutrition:vision (image GHCR + les 4 fichiers
+# modifies de MSPR-AI-Nutrition) et bascule ANALYZE_BACKEND sur mistral_vision
+# (repli automatique sur Food-101 en cas d'echec).
+services:
+  ai-nutrition:
+    image: mspr-ai-nutrition:vision
+    environment:
+      ANALYZE_BACKEND: mistral_vision
