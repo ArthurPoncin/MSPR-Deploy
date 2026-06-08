@@ -1,0 +1,61 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: cadvisor
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: node-exporter
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: postgres-metier
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  - job_name: postgres-auth
+    static_configs:
+      - targets: ['postgres-exporter-auth:9187']
+
+  - job_name: mongodb
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+
+  # ---------------------------------------------------------------------
+  # Cibles applicatives (instrumentees au sprint A2).
+  # API Spring Boot : /api/actuator/prometheus (context-path /api).
+  # FastAPI (ai-nutrition, reco-fitness) et Auth (Hono) : /metrics.
+  # ---------------------------------------------------------------------
+  - job_name: api
+    metrics_path: /api/actuator/prometheus
+    static_configs:
+      - targets: ['mspr-api:8080']
+
+  - job_name: ai-nutrition
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['mspr-ai-nutrition:8001']
+
+  - job_name: reco-fitness
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['mspr-reco-fitness:8000']
+
+  - job_name: auth
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['mspr-auth-service:3000']

@@ -1,0 +1,167 @@
+# Overlay observabilite MSPR HealthAI Coach (MSPR3 / TPRE601).
+#
+# A combiner avec le compose de base, il ne modifie aucun service applicatif :
+#   Mode prod : docker compose -f docker-compose.yml     -f docker-compose.monitoring.yml up -d
+#   Mode dev  : docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml up -d
+#
+# Fournit : metriques (Prometheus + exporters), logs centralises (Loki + Promtail),
+# tableaux de bord (Grafana) et alertes basiques (Alertmanager).
+# Detail des donnees collectees : voir monitoring/README.md.
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: mspr-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - mspr_data_network
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: mspr-alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    networks:
+      - mspr_data_network
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: mspr-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - mspr_data_network
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: mspr-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - mspr_data_network
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: mspr-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail_positions:/tmp
+    depends_on:
+      - loki
+    networks:
+      - mspr_data_network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: mspr-cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8085:8080"
+    networks:
+      - mspr_data_network
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: mspr-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro
+    ports:
+      - "9100:9100"
+    networks:
+      - mspr_data_network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: mspr-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://healthai_user:${DB_PASSWORD:-password}@mspr-healthai-db:5432/healthai?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks:
+      - mspr_data_network
+
+  postgres-exporter-auth:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: mspr-postgres-exporter-auth
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${AUTH_DB_USER:-root}:${AUTH_DB_PASSWORD:-password}@mspr-auth-db:5432/${AUTH_DB_NAME:-auth_db}?sslmode=disable"
+    ports:
+      - "9188:9187"
+    networks:
+      - mspr_data_network
+
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.40
+    container_name: mspr-mongodb-exporter
+    restart: unless-stopped
+    command:
+      - --mongodb.uri=mongodb://mspr-mongo:27017
+      - --collect-all
+    ports:
+      - "9216:9216"
+    networks:
+      - mspr_data_network
+
+networks:
+  mspr_data_network:
+    driver: bridge
+    name: mspr_data_network
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  promtail_positions:

@@ -1,0 +1,66 @@
+# Configuration PERFORMANCE (MSPR3 / TPRE601) : optimisee pour materiel modeste.
+# A combiner avec un compose de base :
+#   docker compose -f docker-compose.yml -f docker-compose.performance.yml up -d
+#
+# Applique des limites CPU/RAM a chaque service. Pour alleger davantage, ne demarrer
+# que le coeur de la stack (sans IA generative lourde, qui retombe sur le fallback statique) :
+#   docker compose -f docker-compose.yml -f docker-compose.performance.yml up -d \
+#     db auth-db auth-migrate auth api etl mongo reco-fitness front
+#
+# Monitoring simplifie (metriques essentielles seulement) :
+#   docker compose -f docker-compose.monitoring.yml up -d prometheus grafana cadvisor
+services:
+  db:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+  auth-db:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+  auth:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+  api:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 768M
+  etl:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+  ai-nutrition:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1500M
+  reco-fitness:
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+  mongo:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+  front:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M

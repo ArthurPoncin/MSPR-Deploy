@@ -5,6 +5,9 @@
 # Sources clonees par bootstrap-dev.sh
 sources/
 
+# Sauvegardes locales (backup.sh)
+backups/
+
 # Memo passphrase (jamais commit)
 .passphrase.local
 

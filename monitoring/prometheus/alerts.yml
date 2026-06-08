@@ -1,0 +1,31 @@
+groups:
+  - name: disponibilite
+    rules:
+      - alert: CibleInjoignable
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cible {{ $labels.job }} injoignable"
+          description: "La cible {{ $labels.instance }} (job {{ $labels.job }}) ne repond plus depuis 1 minute."
+
+  - name: ressources
+    rules:
+      - alert: ConteneurCpuEleve
+        expr: sum(rate(container_cpu_usage_seconds_total{name=~"mspr-.*"}[5m])) by (name) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU eleve sur {{ $labels.name }}"
+          description: "Le conteneur {{ $labels.name }} consomme plus de 0.9 coeur CPU depuis 5 minutes."
+
+      - alert: ConteneurMemoireElevee
+        expr: container_memory_usage_bytes{name=~"mspr-.*"} / 1073741824 > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memoire elevee sur {{ $labels.name }}"
+          description: "Le conteneur {{ $labels.name }} utilise plus de 2 Go de RAM depuis 5 minutes."

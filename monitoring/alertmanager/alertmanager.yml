@@ -1,0 +1,13 @@
+# Configuration minimale pour la demonstration du monitoring.
+# Les alertes declenchees par Prometheus sont regroupees et consultables dans
+# l'UI Alertmanager (http://localhost:9093). Le receiver par defaut ne route vers
+# aucune integration externe (pas d'email/Slack en environnement de demo).
+route:
+  receiver: defaut
+  group_by: ['alertname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+
+receivers:
+  - name: defaut

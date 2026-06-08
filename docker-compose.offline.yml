@@ -1,0 +1,19 @@
+# Configuration OFFLINE (MSPR3 / TPRE601) : mode degrade demontrable sans internet.
+# A combiner avec un compose de base :
+#   docker compose -f docker-compose.yml     -f docker-compose.offline.yml up -d   (prod)
+#   docker compose -f docker-compose.dev.yml -f docker-compose.offline.yml up -d   (dev)
+#
+# Prerequis (une seule fois, avec internet) : images construites/pull et modele
+# Ollama gemma3:4b telecharge. Ensuite la stack tourne entierement hors-ligne.
+#
+# Effets : LLM force sur Ollama local (aucun appel Mistral), Auth sans verification
+# email (aucun appel Resend). Le front reste branche sur le backend local seede par l'ETL.
+services:
+  auth:
+    environment:
+      AUTH_OFFLINE: "true"
+
+  ai-nutrition:
+    environment:
+      DEFAULT_LLM: ollama
+      MISTRAL_API_KEY: ""

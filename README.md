@@ -125,6 +125,52 @@ Les images GHCR sont buildees depuis ces depots publics. Le mode dev les clone d
 | `mspr-reco-fitness` | `master` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-Reco-Fitness- |
 | `mspr-mongodb` | `master` | https://github.com/whitefoxxyt/MSPR-HealthAI-Coach-MongoDB |
 
+## Monitoring / observabilite
+
+Une stack d'observabilite (Prometheus, Grafana, Loki, Alertmanager) est fournie dans l'overlay `docker-compose.monitoring.yml`. Elle s'ajoute a la stack applicative sans la modifier.
+
+```bash
+# Mode prod
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# Mode dev
+docker compose -f docker-compose.dev.yml -f docker-compose.monitoring.yml up -d
+```
+
+| Outil | URL | Role |
+|-------|-----|------|
+| Grafana | http://localhost:3001 | Tableaux de bord (admin / admin par defaut) |
+| Prometheus | http://localhost:9090 | Metriques + alertes |
+| Alertmanager | http://localhost:9093 | Alertes declenchees |
+| Loki | http://localhost:3100 | Logs centralises (via Grafana) |
+
+Donnees collectees : metriques applicatives (API Spring via Actuator, FastAPI et Auth via /metrics), metriques conteneurs (cAdvisor), hote (node-exporter), PostgreSQL metier + auth et MongoDB (exporters), et logs de tous les conteneurs (Promtail vers Loki). Liste exhaustive : voir `monitoring/README.md`.
+
+## Configurations multi-environnement
+
+Trois configurations (complete, offline, performance) sont documentees dans `CONFIGS.md`.
+
+```bash
+# Complete (tous services + monitoring)
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# Offline (sans internet : Ollama local, Auth sans email)
+docker compose -f docker-compose.yml -f docker-compose.offline.yml up -d
+# Performance (limites CPU/RAM ; voir CONFIGS.md pour le demarrage allege)
+docker compose -f docker-compose.yml -f docker-compose.performance.yml up -d
+```
+
+## Sauvegarde et restauration
+
+Scripts dans `scripts/`, operant sur les conteneurs en cours d'execution :
+
+```bash
+./scripts/backup.sh                  # dump horodate dans backups/<timestamp>/
+./scripts/restore.sh                 # restaure la derniere sauvegarde
+./scripts/restore.sh backups/XXXX    # restaure une sauvegarde precise
+./scripts/clean.sh                   # remise a zero (supprime les volumes) ; --dev pour le mode dev
+```
+
+`backup.sh` sauvegarde PostgreSQL metier (`healthai`), PostgreSQL auth (`auth_db`) et MongoDB (`reco_fitness`). `restore.sh` recharge ces dumps (`pg_dump --clean`, `mongorestore --drop`, donc remplace les donnees existantes). Le dossier `backups/` n'est pas versionne.
+
 ## Depannage
 
 **Le pull Ollama est tres long.** Le premier `docker compose up` telecharge `gemma3:4b` (~3 Go). Suivre avec `docker compose logs -f ollama`.
