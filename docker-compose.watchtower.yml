@@ -1,0 +1,44 @@
+# Overlay : CD minimal via Watchtower (MSPR3).
+#
+# Watchtower interroge GHCR periodiquement et redeploie automatiquement un
+# service des qu'un nouveau :latest est publie (push -> CI -> build/publish GHCR).
+# Boucle complete : git push -> GitHub Actions build l'image -> Watchtower la
+# tire et recree le conteneur, sans intervention manuelle.
+#
+# A combiner apres les autres overlays :
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml \
+#     -f docker-compose.traefik.yml -f docker-compose.vision.yml \
+#     -f docker-compose.watchtower.yml up -d
+#
+# Ne surveille QUE les conteneurs listes en argument (images GHCR officielles).
+# Le front (mspr-front) est volontairement exclu : il tourne sur une image
+# rebuildee localement avec les URLs publiques figees au build, sans registre
+# source a suivre -> son redeploiement reste manuel.
+# Limite connue : les migrations de BDD one-shot (mspr-auth-migrate) ne sont pas
+# rejouees par Watchtower ; si une mise a jour backend embarque une migration,
+# relancer via `docker compose ... up -d` pour declencher le conteneur migrate.
+services:
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: mspr-watchtower
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      WATCHTOWER_CLEANUP: "true"          # supprime l'ancienne image apres maj
+      WATCHTOWER_POLL_INTERVAL: "300"     # verifie GHCR toutes les 5 min
+      WATCHTOWER_INCLUDE_RESTARTING: "true"
+      TZ: Europe/Paris
+    command:
+      - mspr-api
+      - mspr-auth-service
+      - mspr-etl
+      - mspr-reco-fitness
+      - mspr-ai-nutrition
