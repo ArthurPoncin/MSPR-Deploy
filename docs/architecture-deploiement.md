@@ -204,15 +204,24 @@ postgres-exporter-auth `9188`, mongodb-exporter `9216`.
 
 ## 5. Configurations de deploiement et point d'entree
 
-La stack se decline en trois configurations, toutes detaillees dans `CONFIGS.md`. Elles
-se combinent avec un compose de base (`docker-compose.yml` en mode prod / images GHCR, ou
-`docker-compose.dev.yml` en mode dev / build local) et un overlay.
+La stack se decline en plusieurs configurations et overlays, tous detailles dans
+`CONFIGS.md`. Ils se combinent avec un compose de base (`docker-compose.yml` en mode prod /
+images GHCR, ou `docker-compose.dev.yml` en mode dev / build local).
 
 | Configuration | Overlay | Objectif |
 |---------------|---------|----------|
 | Complete | `docker-compose.monitoring.yml` | tous les services + IA generative + monitoring complet |
 | Offline | `docker-compose.offline.yml` | demo sans internet : Ollama local, Auth sans email (`AUTH_OFFLINE`) |
 | Performance | `docker-compose.performance.yml` | materiel modeste : limites CPU/RAM, monitoring simplifie, IA lourde optionnelle |
+| Exposition publique | `docker-compose.traefik.yml` | reverse proxy Traefik + TLS, routage `*.zespri.duckdns.org` (front, api, auth, ai, reco, grafana) |
+| Classification photo | `docker-compose.vision.yml` | `ai-nutrition` sur le backend Mistral vision (route A1) |
+| Deploiement continu | `docker-compose.watchtower.yml` | Watchtower : redeploiement automatique des services backend sur nouvelle image GHCR (CD) |
+
+Les trois premieres lignes sont des configurations alternatives ; les trois suivantes sont
+des overlays composables. En production sur le serveur, ils sont combines (`monitoring` +
+`traefik` + `vision` + `watchtower`) : la plateforme est exposee en HTTPS derriere Traefik
+(reseau externe `proxy_net`), supervisee, et maintenue a jour automatiquement par Watchtower
+(boucle CI/CD complete, voir `CICD.md`).
 
 Point d'entree unique : `./bootstrap.sh` (mode prod par defaut, `--dev` pour cloner les
 sources et builder localement). Le script cree `.env`, genere `BETTER_AUTH_SECRET`,

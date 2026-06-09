@@ -2,8 +2,10 @@
 
 Industrialisation de la plateforme HealthAI Coach. Chaque service possede sa propre
 chaine d'integration continue (GitHub Actions) qui teste le code puis publie une image
-Docker sur GitHub Container Registry (GHCR). Le deploiement se fait en local via
-`bootstrap.sh`, qui orchestre l'ensemble avec Docker Compose.
+Docker sur GitHub Container Registry (GHCR). Le premier deploiement se fait via
+`bootstrap.sh`, qui orchestre l'ensemble avec Docker Compose ; ensuite, le deploiement
+continu (CD) est assure par Watchtower, qui redeploie automatiquement chaque service des
+qu'une nouvelle image est publiee sur GHCR.
 
 ## Vue d'ensemble du flux
 
@@ -16,10 +18,15 @@ GitHub Actions (un workflow par depot)
    |-- tests + couverture
    |-- build de l'image Docker
    v
-publication sur GHCR (ghcr.io/whitefoxxyt/mspr-<service>)
+publication sur GHCR (ghcr.io/whitefoxxyt/mspr-<service>:latest)
+   |
+   +-- premier demarrage : ./bootstrap.sh -> docker compose up -d
    |
    v
-deploiement local : ./bootstrap.sh  ->  docker compose up -d
+Watchtower (sur l'hote) interroge GHCR toutes les 5 min
+   |
+   v
+nouvelle image detectee -> Watchtower recree le conteneur (CD automatique)
 ```
 
 La publication de l'image n'a lieu que sur `push` (pas sur les pull requests) et seulement
@@ -81,8 +88,34 @@ Le deploiement de la plateforme est decrit en detail dans `README.md`. En resume
 `bootstrap.sh` prepare aussi l'environnement : creation du `.env`, generation des secrets
 (`BETTER_AUTH_SECRET`, mots de passe des bases), dechiffrement des cles API.
 
-Trois configurations sont disponibles via des overlays Compose (voir `CONFIGS.md`) :
-complete (avec monitoring), offline (sans internet) et performance (limites de ressources).
+Plusieurs overlays Compose se combinent au compose de base (detail dans `CONFIGS.md`) :
+monitoring (observabilite), offline (sans internet), performance (limites de ressources),
+traefik (exposition publique HTTPS) et watchtower (deploiement continu).
+
+## Deploiement continu (CD) via Watchtower
+
+Le deploiement continu ferme la boucle CI/CD : `git push` -> GitHub Actions build et publie
+l'image sur GHCR -> Watchtower tire la nouvelle image et recree le conteneur, sans
+intervention manuelle. Il est fourni par l'overlay `docker-compose.watchtower.yml`.
+
+- **Fonctionnement** : le conteneur `mspr-watchtower` interroge GHCR toutes les 5 minutes
+  (`WATCHTOWER_POLL_INTERVAL=300`) et redeploie un service des qu'un nouveau `:latest` est
+  disponible ; l'ancienne image est supprimee apres mise a jour (`WATCHTOWER_CLEANUP=true`).
+- **Services suivis** : `mspr-api`, `mspr-auth-service`, `mspr-etl`, `mspr-reco-fitness` et
+  `mspr-ai-nutrition` (images officielles GHCR), passes explicitement en argument.
+- **Front exclu** : `mspr-front` est rebuilde localement avec les URLs publiques figees au
+  build, sans image GHCR a suivre ; son redeploiement reste manuel.
+- **Limite (migrations)** : le conteneur one-shot `mspr-auth-migrate` n'est pas rejoue par
+  Watchtower. Si une mise a jour backend embarque une migration, relancer
+  `docker compose ... up -d` pour declencher le conteneur de migration.
+
+En production, les overlays sont combines (monitoring + traefik + vision + watchtower) :
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml \
+  -f docker-compose.traefik.yml -f docker-compose.vision.yml \
+  -f docker-compose.watchtower.yml up -d
+```
 
 ## Sauvegarde, restauration, supervision
 

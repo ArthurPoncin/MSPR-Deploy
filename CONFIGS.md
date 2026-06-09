@@ -1,8 +1,9 @@
 # Configurations multi-environnement (MSPR3 / TPRE601)
 
-Trois configurations de la stack HealthAI Coach, toutes orchestrees en local via Docker
-Compose. Elles se combinent avec un compose de base : `docker-compose.yml` (mode prod,
-images GHCR) ou `docker-compose.dev.yml` (mode dev, build local).
+Trois configurations de base de la stack HealthAI Coach, plus des overlays additionnels
+(exposition publique, classification photo, deploiement continu), toutes orchestrees via
+Docker Compose. Elles se combinent avec un compose de base : `docker-compose.yml` (mode
+prod, images GHCR) ou `docker-compose.dev.yml` (mode dev, build local).
 
 ## 1. Complete
 
@@ -49,6 +50,47 @@ docker compose -f docker-compose.monitoring.yml up -d prometheus grafana cadviso
   de plans repas retombe sur la matrice statique de secours. Pour l'inclure malgre tout,
   ajouter `ai-nutrition ollama` a la liste de services.
 - Monitoring reduit aux metriques essentielles (conteneurs + Prometheus + Grafana).
+
+## Overlays additionnels
+
+Ces overlays se combinent par-dessus une configuration de base (typiquement "complete").
+
+### Exposition publique (Traefik)
+
+`docker-compose.traefik.yml` place la plateforme derriere le reverse proxy Traefik, avec
+TLS. Front, API, Auth, AI-Nutrition, Reco-Fitness et Grafana sont routes sur des
+sous-domaines `*.zespri.duckdns.org` (certresolver `duckdns`, certificat wildcard). Les
+variables CORS et les URLs publiques sont alignees sur l'origine du front. Necessite le
+reseau externe `proxy_net`.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml \
+  -f docker-compose.traefik.yml up -d
+```
+
+### Classification photo (vision / Mistral)
+
+`docker-compose.vision.yml` bascule `ai-nutrition` sur le backend `mistral_vision`
+(`ANALYZE_BACKEND=mistral_vision`) pour la classification d'aliments par photo (route A1),
+avec repli automatique sur Food-101 en cas d'echec. Utilise l'image officielle GHCR de
+`ai-nutrition`.
+
+### Deploiement continu (Watchtower)
+
+`docker-compose.watchtower.yml` ajoute Watchtower : il interroge GHCR toutes les 5 minutes
+et redeploie automatiquement les services backend des qu'une nouvelle image `:latest` est
+publiee (detail dans `CICD.md`). Le front (build local) est exclu.
+
+### Combinaison de production (serveur)
+
+Sur le serveur, les overlays sont combines pour une plateforme exposee, supervisee et
+maintenue a jour automatiquement :
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml \
+  -f docker-compose.traefik.yml -f docker-compose.vision.yml \
+  -f docker-compose.watchtower.yml up -d
+```
 
 ## Sauvegarde, restauration, remise a zero
 
