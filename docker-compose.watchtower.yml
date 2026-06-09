@@ -32,6 +32,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      # containrrr/watchtower embarque un client Docker ancien (API 1.25) que le
+      # daemon recent (Docker 29) refuse ("client version 1.25 is too old") ;
+      # on fige l'API client a une version supportee par le daemon (>= 1.40).
+      DOCKER_API_VERSION: "1.44"
       WATCHTOWER_CLEANUP: "true"          # supprime l'ancienne image apres maj
       WATCHTOWER_POLL_INTERVAL: "300"     # verifie GHCR toutes les 5 min
       WATCHTOWER_INCLUDE_RESTARTING: "true"
