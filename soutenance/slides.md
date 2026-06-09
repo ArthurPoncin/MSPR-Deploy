@@ -11,7 +11,7 @@ paginate: true
 
 Plateforme microservices orchestree en local par Docker Compose
 
-Arthur Poncin
+Arthur Poncin, Theo Renard, Martin Ornh, Foidjou Daumard
 
 ---
 
