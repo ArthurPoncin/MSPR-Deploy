@@ -205,6 +205,9 @@ services:
       MONGO_DATABASE: ${MONGO_DATABASE:-reco_fitness}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       AUTH_API_URL: http://mspr-auth-service:3000
+      # L'image n'embarque pas scoring_model.pkl (gitignore) : entrainement au
+      # demarrage depuis le catalogue PG, requis pour le scoring hybride premium.
+      SCORING_AUTOTRAIN: "1"
     depends_on:
       db:
         condition: service_healthy
