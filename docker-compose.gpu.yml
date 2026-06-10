@@ -1,0 +1,29 @@
+# Overlay GPU (MSPR3) : passe Ollama sur GPU NVIDIA quand l'hote en a un.
+# A combiner avec une configuration de base, par exemple :
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+# (cumulable avec les autres overlays : monitoring, traefik, vision, watchtower)
+#
+# Prerequis hote : driver NVIDIA et NVIDIA Container Toolkit configures
+# (docker info doit lister le runtime nvidia). Verification rapide :
+#   docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
+# Sans GPU exploitable, ne pas inclure cet overlay : Ollama tourne alors sur CPU.
+#
+# Verification apres demarrage :
+#   docker exec mspr-ollama nvidia-smi    # la carte est visible dans le conteneur
+#   docker exec mspr-ollama ollama ps     # la colonne PROCESSOR doit indiquer GPU
+
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      # Modele garde charge en VRAM en permanence : evite le cold start.
+      OLLAMA_KEEP_ALIVE: "-1"
+      # Une inference a la fois : sur une carte 4 Go (Quadro P1000 du serveur),
+      # multiplier les contextes ferait deborder la VRAM.
+      OLLAMA_NUM_PARALLEL: "1"

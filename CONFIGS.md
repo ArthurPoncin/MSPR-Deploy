@@ -1,8 +1,8 @@
 # Configurations multi-environnement (MSPR3 / TPRE601)
 
 Trois configurations de base de la stack HealthAI Coach, plus des overlays additionnels
-(exposition publique, classification photo, deploiement continu), toutes orchestrees via
-Docker Compose. Elles se combinent avec un compose de base : `docker-compose.yml` (mode
+(exposition publique, classification photo, deploiement continu, acceleration GPU),
+toutes orchestrees via Docker Compose. Elles se combinent avec un compose de base : `docker-compose.yml` (mode
 prod, images GHCR) ou `docker-compose.dev.yml` (mode dev, build local).
 
 ## 1. Complete
@@ -81,6 +81,20 @@ avec repli automatique sur Food-101 en cas d'echec. Utilise l'image officielle G
 et redeploie automatiquement les services backend des qu'une nouvelle image `:latest` est
 publiee (detail dans `CICD.md`). Le front (build local) est exclu.
 
+### Acceleration GPU (Ollama)
+
+`docker-compose.gpu.yml` reserve le GPU NVIDIA de l'hote pour le conteneur Ollama et
+garde le modele charge en VRAM (`OLLAMA_KEEP_ALIVE=-1`, une inference a la fois pour
+tenir sur les cartes a 4 Go). Prerequis : driver NVIDIA et NVIDIA Container Toolkit sur
+l'hote. Le passage sur GPU rend la generation Gemma3:4b exploitable (le run CPU documente
+200 000+ ms par plan, au-dela du timeout applicatif) et permet d'activer le prompt
+few-shot complet (`FEW_SHOT_FULL_EXAMPLES=true` cote ai-nutrition) ainsi que l'eval LLM
+n=30 (depot AI-Nutrition, `docs/GPU_EVAL_PLAYBOOK.md`).
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
+```
+
 ### Combinaison de production (serveur)
 
 Sur le serveur, les overlays sont combines pour une plateforme exposee, supervisee et
@@ -91,6 +105,9 @@ docker compose -f docker-compose.yml -f docker-compose.monitoring.yml \
   -f docker-compose.traefik.yml -f docker-compose.vision.yml \
   -f docker-compose.watchtower.yml up -d
 ```
+
+Une fois le passthrough GPU valide sur l'hote (toolkit NVIDIA configure), ajouter
+`-f docker-compose.gpu.yml` a cette combinaison.
 
 ## Sauvegarde, restauration, remise a zero
 

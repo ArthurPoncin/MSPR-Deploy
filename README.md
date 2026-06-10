@@ -147,7 +147,8 @@ Donnees collectees : metriques applicatives (API Spring via Actuator, FastAPI et
 
 ## Configurations multi-environnement
 
-Trois configurations (complete, offline, performance) sont documentees dans `CONFIGS.md`.
+Trois configurations (complete, offline, performance) et les overlays additionnels
+(Traefik, vision, Watchtower, GPU) sont documentes dans `CONFIGS.md`.
 
 ```bash
 # Complete (tous services + monitoring)
@@ -156,6 +157,8 @@ docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 docker compose -f docker-compose.yml -f docker-compose.offline.yml up -d
 # Performance (limites CPU/RAM ; voir CONFIGS.md pour le demarrage allege)
 docker compose -f docker-compose.yml -f docker-compose.performance.yml up -d
+# GPU (Ollama accelere par le GPU NVIDIA de l'hote, prerequis dans CONFIGS.md)
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d
 ```
 
 ## Sauvegarde et restauration
