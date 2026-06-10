@@ -5,6 +5,10 @@
 # Routage sur *.zespri.duckdns.org, TLS via le certresolver "duckdns" (wildcard deja emis).
 # Le front est servi par l'image rebuildee avec les URLs publiques (mspr-front:traefik).
 # Les variables CORS pointent toutes vers l'origine du front (mspr.zespri.duckdns.org).
+#
+# Les endpoints de metriques (/metrics, /api/actuator) sont bloques cote public par un
+# routeur prioritaire + middleware ipAllowList : Prometheus les scrape en interne via le
+# reseau Docker, ils n'ont pas a etre servis par Traefik.
 
 services:
   front:
@@ -29,6 +33,14 @@ services:
       - "traefik.http.routers.mspr-api.entrypoints=websecure"
       - "traefik.http.routers.mspr-api.tls.certresolver=duckdns"
       - "traefik.http.services.mspr-api.loadbalancer.server.port=8080"
+      # Blocage public des endpoints de metriques (middleware declare une seule fois ici)
+      - "traefik.http.middlewares.mspr-metrics-deny.ipallowlist.sourcerange=127.0.0.1/32"
+      - "traefik.http.routers.mspr-api-metrics.rule=Host(`mspr-api.zespri.duckdns.org`) && PathPrefix(`/api/actuator`)"
+      - "traefik.http.routers.mspr-api-metrics.entrypoints=websecure"
+      - "traefik.http.routers.mspr-api-metrics.tls.certresolver=duckdns"
+      - "traefik.http.routers.mspr-api-metrics.priority=100"
+      - "traefik.http.routers.mspr-api-metrics.middlewares=mspr-metrics-deny"
+      - "traefik.http.routers.mspr-api-metrics.service=mspr-api"
 
   auth:
     networks: [mspr_data_network, proxy_net]
@@ -42,6 +54,12 @@ services:
       - "traefik.http.routers.mspr-auth.entrypoints=websecure"
       - "traefik.http.routers.mspr-auth.tls.certresolver=duckdns"
       - "traefik.http.services.mspr-auth.loadbalancer.server.port=3000"
+      - "traefik.http.routers.mspr-auth-metrics.rule=Host(`mspr-auth.zespri.duckdns.org`) && Path(`/metrics`)"
+      - "traefik.http.routers.mspr-auth-metrics.entrypoints=websecure"
+      - "traefik.http.routers.mspr-auth-metrics.tls.certresolver=duckdns"
+      - "traefik.http.routers.mspr-auth-metrics.priority=100"
+      - "traefik.http.routers.mspr-auth-metrics.middlewares=mspr-metrics-deny"
+      - "traefik.http.routers.mspr-auth-metrics.service=mspr-auth"
 
   ai-nutrition:
     networks: [mspr_data_network, ai_internal, proxy_net]
@@ -54,6 +72,12 @@ services:
       - "traefik.http.routers.mspr-ai.entrypoints=websecure"
       - "traefik.http.routers.mspr-ai.tls.certresolver=duckdns"
       - "traefik.http.services.mspr-ai.loadbalancer.server.port=8001"
+      - "traefik.http.routers.mspr-ai-metrics.rule=Host(`mspr-ai.zespri.duckdns.org`) && Path(`/metrics`)"
+      - "traefik.http.routers.mspr-ai-metrics.entrypoints=websecure"
+      - "traefik.http.routers.mspr-ai-metrics.tls.certresolver=duckdns"
+      - "traefik.http.routers.mspr-ai-metrics.priority=100"
+      - "traefik.http.routers.mspr-ai-metrics.middlewares=mspr-metrics-deny"
+      - "traefik.http.routers.mspr-ai-metrics.service=mspr-ai"
 
   reco-fitness:
     networks: [mspr_data_network, proxy_net]
@@ -66,6 +90,12 @@ services:
       - "traefik.http.routers.mspr-reco.entrypoints=websecure"
       - "traefik.http.routers.mspr-reco.tls.certresolver=duckdns"
       - "traefik.http.services.mspr-reco.loadbalancer.server.port=8000"
+      - "traefik.http.routers.mspr-reco-metrics.rule=Host(`mspr-reco.zespri.duckdns.org`) && Path(`/metrics`)"
+      - "traefik.http.routers.mspr-reco-metrics.entrypoints=websecure"
+      - "traefik.http.routers.mspr-reco-metrics.tls.certresolver=duckdns"
+      - "traefik.http.routers.mspr-reco-metrics.priority=100"
+      - "traefik.http.routers.mspr-reco-metrics.middlewares=mspr-metrics-deny"
+      - "traefik.http.routers.mspr-reco-metrics.service=mspr-reco"
 
   grafana:
     networks: [mspr_data_network, proxy_net]
