@@ -74,7 +74,7 @@ requete pas directement, il passe par Grafana.
 
 Definies dans `monitoring/prometheus/alerts.yml`, regroupees et consultables dans
 Alertmanager. En environnement de demonstration, aucune notification externe n'est
-configuree (pas d'email ni de Slack) : on consulte les alertes dans l'UID.
+configuree (pas d'email ni de Slack) : on consulte les alertes dans l'UI.
 
 | Alerte | Condition | Duree | Severite | Sens |
 |--------|-----------|-------|----------|------|

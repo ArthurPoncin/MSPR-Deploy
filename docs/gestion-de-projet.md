@@ -93,16 +93,17 @@ image, avec des garde-fous de qualite.
 - Couverture imposee a 80 % cote API (JaCoCo) et Reco-Fitness (pytest-cov).
 - Strategie de tags via `docker/metadata-action` (branche, semver sur tags `vX.Y.Z`, SHA
   court, `latest` depuis la branche par defaut).
-- Etape SonarCloud sur l'API, declenchee automatiquement des que le secret `SONAR_TOKEN`
-  est present (ignoree sinon, sans casser le pipeline). L'API embarque aussi un
-  environnement Sonar local (`docker-compose.sonar.yml`) pour une analyse manuelle.
+- Analyse de code SonarCloud via l'application GitHub installee sur l'organisation
+  `whitefoxxyt` (Automatic Analysis a chaque push, sans token dans les depots). L'API
+  embarque aussi un environnement Sonar local (`docker-compose.sonar.yml`) pour une
+  analyse manuelle.
 - Durcissement des conteneurs (volet securite operationnelle de l'industrialisation) :
   les 6 services applicatifs tournent en utilisateur non-root, `HEALTHCHECK` presents,
   `no-new-privileges` et rotation des logs json-file (`max-size: 10m`, `max-file: 3`) sur
   tous les services, ports des bases (5433 / 5434 / 27018) bindes sur `127.0.0.1`.
 
-**Livrables.** 8 pipelines CI/CD publiant sur GHCR, seuils de couverture configures, etape
-SonarCloud cote API, `docker-compose.yml` durci, `CICD.md`.
+**Livrables.** 8 pipelines CI/CD publiant sur GHCR, seuils de couverture configures,
+analyse SonarCloud (organisation `whitefoxxyt`), `docker-compose.yml` durci, `CICD.md`.
 
 ### Sprint D : Documentation, securite et gestion de projet
 
@@ -139,10 +140,15 @@ petite equipe :
 
 ## 4. Tableau Kanban et outils
 
-Le suivi des taches s'est fait sur un Kanban simple a trois colonnes, materialise par les
-issues GitHub et leur etat :
+Le suivi des taches se fait sur un GitHub Project commun a tous les depots de la
+plateforme (projet « MSPR » de l'organisation `whitefoxxyt`), colonnes Backlog / Ready /
+In progress / In review / Done. Une capture du tableau est fournie avec ce document
+(`kanban-github-project.png`) ; les taches de la MSPR3 y sont regroupees par sprint
+(prefixe `[MSPR3][Sprint A..D]`).
 
-| A faire | En cours | Termine |
+Lecture des colonnes :
+
+| Backlog / Ready | In progress / In review | Done |
 |---------|----------|---------|
 | Issues planifiees du sprint, non demarrees | Issue en cours de developpement, pull request ouverte | Pull request mergee, increment verifie sur la stack |
 

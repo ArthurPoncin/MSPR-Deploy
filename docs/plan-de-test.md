@@ -47,7 +47,7 @@ Tous les workflows se declenchent sur `push` et `pull_request` vers la branche p
 - **Type** : tests unitaires JUnit (Maven).
 - **CI** (`.github/workflows/ci.yml`) : job `test` lance `./mvnw test` sous JDK 21 (Temurin).
 - **Couverture** : JaCoCo, seuil **80 % sur les lignes ET les branches** (`jacoco-maven-plugin`, regle `jacoco-check`, element `BUNDLE`). Le rapport est genere a la phase `test` ; le controle du seuil s'execute a la phase `verify`.
-- **SonarCloud** : une etape conditionnelle lance `./mvnw -B verify sonar:sonar` (donc declenche aussi le controle JaCoCo). Elle ne s'active que si le secret GitHub `SONAR_TOKEN` est present, sinon elle est ignoree sans casser le pipeline.
+- **SonarCloud** : l'analyse statique du depot est assuree par l'application GitHub SonarCloud de l'organisation `whitefoxxyt` (Automatic Analysis a chaque push, sans token ni etape CI dans le depot).
 - **Local** :
   ```bash
   cd MSPR-API
