@@ -35,7 +35,7 @@ Le script :
 Pour eviter la saisie interactive, passer la passphrase en variable d'environnement :
 
 ```bash
-MSPR_PASS="MSPR-EPSI-2026" ./bootstrap.sh
+MSPR_PASS="<passphrase fournie par l'equipe>" ./bootstrap.sh
 ```
 
 Au premier lancement, Docker pull (ou build) les 8 services puis Ollama telecharge `gemma3:4b` (~3 Go). Comptez 5 a 10 minutes selon la connexion.
