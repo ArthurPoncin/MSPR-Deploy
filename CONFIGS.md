@@ -85,8 +85,10 @@ publiee (detail dans `CICD.md`). Le front (build local) est exclu.
 
 `docker-compose.gpu.yml` reserve le GPU NVIDIA de l'hote pour le conteneur Ollama et
 garde le modele charge en VRAM (`OLLAMA_KEEP_ALIVE=-1`, une inference a la fois pour
-tenir sur les cartes a 4 Go). Prerequis : driver NVIDIA et NVIDIA Container Toolkit sur
-l'hote. Le passage sur GPU rend la generation Gemma3:4b exploitable (le run CPU documente
+tenir sur les cartes a 4 Go). Il force aussi l'offload complet du modele via
+`OLLAMA_NUM_GPU=99` cote ai-nutrition (l'auto-estimation d'Ollama est trop prudente sur
+la Quadro P1000 : ~1 Go offloade seulement, contre 2.8 Go en force pour un modele 100 %
+GPU). Prerequis : driver NVIDIA et NVIDIA Container Toolkit sur l'hote. Le passage sur GPU rend la generation Gemma3:4b exploitable (le run CPU documente
 200 000+ ms par plan, au-dela du timeout applicatif) et permet d'activer le prompt
 few-shot complet (`FEW_SHOT_FULL_EXAMPLES=true` cote ai-nutrition) ainsi que l'eval LLM
 n=30 (depot AI-Nutrition, `docs/GPU_EVAL_PLAYBOOK.md`).
