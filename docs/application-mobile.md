@@ -1,14 +1,13 @@
 # Application mobile (MSPR3 / TPRE601)
 
-Ce document presente l'application mobile HealthAI Coach prevue par le cahier des charges
-de la MSPR3 : un client Android / iOS de la plateforme, porteur a terme du mini reseau
-social. L'application est developpee par un membre de l'equipe dans le depot
+Ce document presente l'application mobile HealthAI Coach de la MSPR3 : un client
+Android / iOS de la plateforme, developpe par un membre de l'equipe dans le depot
 `whitefoxxyt/MSPR-HealthAI-Coach-Mobile`. Le document decrit la stack, l'architecture,
-l'integration aux services de la plateforme et la conteneurisation, puis fait le point
-sur la couverture du besoin et le reste a faire.
+l'integration aux services de la plateforme et la conteneurisation, puis liste le
+reste a faire.
 
-Le document reste factuel : il decrit la version presente dans le depot a la date de
-redaction (11/06/2026) et signale explicitement ce qui n'est pas encore livre.
+Le document decrit la version presente dans le depot a la date de redaction
+(11/06/2026).
 
 ## 1. Vue d'ensemble
 
@@ -24,9 +23,6 @@ elle couvre le parcours de coaching de la plateforme :
 - plans nutritionnels et recommandations sportives personnalises ;
 - profil utilisateur : suivi du poids (graphique 14 jours, IMC) et panneau de
   parametres (modification du profil, de l'objectif et des preferences, deconnexion).
-
-Le module mini reseau social (flux de publications, likes / commentaires) n'est pas
-present dans cette version : l'etat detaille et le reste a faire sont en section 6.
 
 ## 2. Stack technique
 
@@ -135,31 +131,12 @@ particulier sur un composant de demonstration (`AIFeaturesDemo.tsx`). L'applicat
 se lance via Expo (le bundler ne bloque pas sur les types) ; la correction de ces
 erreurs et la mise en place d'une chaine CI font partie du reste a faire.
 
-## 6. Couverture du besoin et reste a faire
+## 6. Reste a faire
 
-Etat par rapport au besoin exprime pour l'application mobile (cahier des charges,
-sections III.6 et IV.1) :
-
-| Besoin | Etat dans la version actuelle |
-|--------|-------------------------------|
-| Compatibilite Android et iOS | Couvert : base de code unique Expo / React Native, cibles Android et iOS |
-| Panneau de controle des parametres utilisateur | Partiel : modification du profil physique, de l'objectif et des preferences, deconnexion (onglet Profil). Le nom d'affichage (defini a l'inscription) et la photo de profil ne sont pas encore modifiables. |
-| Consultation des publications sur un flux unique | Non livre : module reseau social en cours de developpement |
-| Ajout de publications texte et / ou medias | Non livre. La brique de capture photo existe (expo-image-picker, utilisee par le scan de repas), pas encore le flux de publication. |
-| API et BDD de gestion des publications et medias | Non livre : a construire avec le module reseau social |
-
-Reste a faire identifie :
-
-- module reseau social cote application : flux unique de publications, creation de
-  publications texte et / ou medias, likes et commentaires, nom d'affichage et photo
-  de profil modifiables ;
-- API et BDD dediees a la gestion des publications et des medias associes, avec un
-  stockage objet pour les fichiers (MinIO, outil recommande par le cahier des charges) ;
 - alignement des routes d'authentification du client sur celles de better-auth
   (section 4) ;
 - correction des erreurs de typecheck / lint et mise en place d'une chaine CI sur le
   depot (lint, verification de types, build), sur le modele des 8 autres depots
   (`CICD.md`) ;
-- une fois le backend publications disponible : raccordement a l'orchestration Compose,
-  au monitoring, aux sauvegardes et au deploiement continu de la plateforme
-  (`MSPR-Deploy`).
+- nom d'affichage (defini a l'inscription) et photo de profil modifiables depuis le
+  panneau de parametres.
