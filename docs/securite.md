@@ -4,8 +4,10 @@ Analyse de securite de la plateforme MSPR HealthAI Coach mise en production
 localement via Docker Compose. Elle confronte l'existant de la plateforme a trois
 referentiels : OWASP Top 10 (2021), RGPD et NIST Cybersecurity Framework. Le perimetre
 couvre les 8 services applicatifs, l'orchestration Compose, les scripts d'exploitation
-et la chaine CI/CD. L'application mobile (mini reseau social) est prise en charge par un
-collegue et reste hors perimetre.
+et la chaine CI/CD. L'application mobile, client de la
+plateforme pris en charge par un autre membre de l'equipe, est decrite dans
+`application-mobile.md` : elle n'expose pas de service cote serveur et reste hors du
+perimetre de cette analyse.
 
 Le document reste factuel : il ne decrit que les controles reellement presents dans le
 depot et signale explicitement ce qui n'est pas couvert.

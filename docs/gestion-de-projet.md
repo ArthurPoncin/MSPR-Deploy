@@ -15,8 +15,9 @@ Contexte concret :
 
 - Petite equipe. Pas de processus lourd : les ceremonies sont allegees et le pilotage se
   fait directement dans GitHub (issues, pull requests, Actions).
-- L'application mobile (mini reseau social) est prise en charge par un collegue. Elle est
-  donc hors du perimetre de ce livrable : aucune tache de ce document ne la concerne.
+- L'application mobile (mini reseau social) est prise en charge par un autre membre de
+  l'equipe, avec son propre rythme de travail : les sprints decrits ici ne la concernent
+  pas. Son etat et son reste a faire sont documentes dans `application-mobile.md`.
 - La cible de mise en production est un deploiement local orchestre par Docker Compose
   (`bootstrap.sh`), point d'evaluation et de demonstration. Le decoupage en sprints est
   pense autour de cette cible.

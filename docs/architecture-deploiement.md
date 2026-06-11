@@ -6,8 +6,9 @@ concentre sur les conteneurs, les reseaux, les ports, le flux d'authentification
 stack d'observabilite. Pour le pas-a-pas de demarrage (prerequis, `bootstrap.sh`,
 commandes utiles, depannage), se reporter au `README.md`.
 
-L'application mobile (mini reseau social) est prise en charge separement par un autre
-membre de l'equipe : elle est hors du perimetre de ce document.
+L'application mobile est prise en charge separement par un autre membre de l'equipe.
+C'est un client de la plateforme (elle ne fait pas partie de la stack orchestree) :
+elle est decrite dans `application-mobile.md`.
 
 ## 1. Conteneurs et reseaux
 

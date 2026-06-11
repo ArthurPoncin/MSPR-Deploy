@@ -1,6 +1,6 @@
 # Plan de test - HealthAI Coach (MSPR3 / TPRE601)
 
-Ce document decrit la strategie de test de la plateforme HealthAI Coach. Chaque service possede sa propre chaine d'integration continue (GitHub Actions) qui teste le code avant de publier une image Docker sur GHCR. Le perimetre couvre les 8 services de la plateforme. L'application mobile (mini reseau social) est prise en charge par un collegue et reste hors perimetre.
+Ce document decrit la strategie de test de la plateforme HealthAI Coach. Chaque service possede sa propre chaine d'integration continue (GitHub Actions) qui teste le code avant de publier une image Docker sur GHCR. Le perimetre couvre les 8 services de la plateforme. L'application mobile, prise en charge par un autre membre de l'equipe, est traitee a part : ses verifications (lint, typecheck) et le reste a faire associe sont decrits dans `application-mobile.md`.
 
 La reference de la chaine CI/CD est `MSPR-Deploy/CICD.md`. L'architecture detaillee est dans `MSPR/CLAUDE.md`.
 
